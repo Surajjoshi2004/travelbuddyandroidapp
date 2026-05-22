@@ -3,6 +3,7 @@ package com.example.tripbuddyandriodapp.ui.screens.tabs
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.tripbuddyandriodapp.data.remote.*
+import com.example.tripbuddyandriodapp.data.repository.AiRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -14,7 +15,10 @@ sealed class ExploreUiState {
     data class Success(
         val weather: WeatherResponse?,
         val attractions: List<PlaceProperties>,
-        val geocoding: GeocodingResult?
+        val geocoding: GeocodingResult?,
+        val aiFoods: List<String> = emptyList(),
+        val aiTips: List<String> = emptyList(),
+        val aiActivities: List<Pair<String, String>> = emptyList()
     ) : ExploreUiState()
     data class Error(val message: String) : ExploreUiState()
 }
@@ -22,7 +26,8 @@ sealed class ExploreUiState {
 @HiltViewModel
 class ExploreViewModel @Inject constructor(
     private val weatherApi: WeatherApi,
-    private val placesApi: PlacesApi
+    private val placesApi: PlacesApi,
+    private val aiRepository: AiRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<ExploreUiState>(ExploreUiState.Idle)
@@ -51,6 +56,9 @@ class ExploreViewModel @Inject constructor(
             _uiState.value = ExploreUiState.Loading
             try {
                 val coords = weatherApi.getCoordinates(destination)
+                val aiFoodData = aiRepository.getLocalFoodAndTips(destination)
+                val aiActivityData = aiRepository.getSuggestedActivities(destination)
+                
                 if (coords != null) {
                     val weather = weatherApi.getWeatherForecast(
                         coords.latitude,
@@ -59,9 +67,23 @@ class ExploreViewModel @Inject constructor(
                         endDate
                     )
                     val attractions = placesApi.getNearbyPlaces(coords.latitude, coords.longitude)
-                    _uiState.value = ExploreUiState.Success(weather, attractions, coords)
+                    _uiState.value = ExploreUiState.Success(
+                        weather = weather, 
+                        attractions = attractions, 
+                        geocoding = coords,
+                        aiFoods = aiFoodData.first,
+                        aiTips = aiFoodData.second,
+                        aiActivities = aiActivityData
+                    )
                 } else {
-                    _uiState.value = ExploreUiState.Error("Could not find coordinates for $destination")
+                    _uiState.value = ExploreUiState.Success(
+                        weather = null,
+                        attractions = emptyList(),
+                        geocoding = null,
+                        aiFoods = aiFoodData.first,
+                        aiTips = aiFoodData.second,
+                        aiActivities = aiActivityData
+                    )
                 }
             } catch (e: Exception) {
                 _uiState.value = ExploreUiState.Error(e.message ?: "An unknown error occurred")

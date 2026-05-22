@@ -11,7 +11,7 @@ import androidx.room.RoomDatabase
         PackingItemEntity::class,
         ExpenseEntity::class
     ],
-    version = 1,
+    version = 2, // Bumped version to 2 to trigger unique constraint migration
     exportSchema = false
 )
 abstract class TripPlannerDatabase : RoomDatabase() {

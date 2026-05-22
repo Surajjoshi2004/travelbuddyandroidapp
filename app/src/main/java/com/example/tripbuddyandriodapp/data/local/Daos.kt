@@ -26,11 +26,21 @@ interface TripDao {
 
 @Dao
 interface DayDao {
+
     @Query("SELECT * FROM days WHERE tripId = :tripId ORDER BY dayNumber ASC")
     fun getDaysForTrip(tripId: Long): Flow<List<DayEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertDay(day: DayEntity): Long
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertDays(days: List<DayEntity>): List<Long>
+
+    @Delete
+    suspend fun deleteDay(day: DayEntity)
+
+    @Query("SELECT MAX(dayNumber) FROM days WHERE tripId = :tripId")
+    suspend fun getLastDayNumber(tripId: Long): Int?
 
     @Query("SELECT * FROM days WHERE isSynced = 0")
     suspend fun getUnsyncedDays(): List<DayEntity>

@@ -15,18 +15,28 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.example.tripbuddyandriodapp.R
 import com.example.tripbuddyandriodapp.data.local.TripEntity
 import com.example.tripbuddyandriodapp.ui.screens.tabs.*
 import com.example.tripbuddyandriodapp.utils.DateUtils
-import com.example.tripbuddyandriodapp.utils.TripStatusUtils
+
+// ── Design Tokens ─────────────────────────────────────────────
+private val BrandPurple    = Color(0xFF5C59D4)
+private val BrandPurpleLight = Color(0xFFEBEBFF)
+private val BrandGreen     = Color(0xFF4CAF50)
+private val SurfaceWhite   = Color(0xFFFFFFFF)
+private val BackgroundPage = Color(0xFFF6F6FB)
+private val TextPrimary    = Color(0xFF1A1A2E)
+private val TextSecondary  = Color(0xFF8A8A9A)
+private val CardBorder     = Color(0xFFEEEEF5)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,44 +51,64 @@ fun HomeScreen(
     var showCreateTripSheet by remember { mutableStateOf(false) }
     var selectedTab by remember { mutableIntStateOf(0) }
 
-    val dashboardColor = Color(0xFF5C59D4)
-
-    // Automatically sync the DetailViewModel with the active trip (ongoing or upcoming)
     LaunchedEffect(uiState.ongoingTrip, uiState.upcomingTrips) {
         val activeTrip = uiState.ongoingTrip ?: uiState.upcomingTrips.firstOrNull()
         activeTrip?.let { detailViewModel.setTripId(it.id) }
     }
 
     Scaffold(
+        containerColor = BackgroundPage,
         bottomBar = {
             NavigationBar(
-                containerColor = Color.White,
+                containerColor = SurfaceWhite,
                 tonalElevation = 0.dp,
-                modifier = Modifier.height(72.dp)
+                windowInsets = NavigationBarDefaults.windowInsets,
+                modifier = Modifier
+                    .shadow(16.dp, RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
+                    .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
             ) {
                 val items = listOf(
-                    HomeTabItem("Home", Icons.Filled.Home, Icons.Outlined.Home),
-                    HomeTabItem("Itinerary", Icons.Filled.CalendarMonth, Icons.Outlined.CalendarMonth),
-                    HomeTabItem("Packing", Icons.Filled.Backpack, Icons.Outlined.Backpack),
-                    HomeTabItem("Budget", Icons.Filled.AccountBalanceWallet, Icons.Outlined.AccountBalanceWallet),
-                    HomeTabItem("Explore", Icons.Filled.Explore, Icons.Outlined.Explore)
+                    HomeTabItemData("Home",      Icons.Filled.Home,                 Icons.Outlined.Home),
+                    HomeTabItemData("Itinerary", Icons.Filled.CalendarMonth,        Icons.Outlined.CalendarMonth),
+                    HomeTabItemData("Packing",   Icons.Filled.Backpack,             Icons.Outlined.Backpack),
+                    HomeTabItemData("Budget",    Icons.Filled.AccountBalanceWallet, Icons.Outlined.AccountBalanceWallet),
+                    HomeTabItemData("Explore",   Icons.Filled.Explore,              Icons.Outlined.Explore)
                 )
                 items.forEachIndexed { index, item ->
                     NavigationBarItem(
                         selected = selectedTab == index,
                         onClick = { selectedTab = index },
-                        icon = { 
-                            Icon(
-                                imageVector = if (selectedTab == index) item.selectedIcon else item.unselectedIcon, 
-                                contentDescription = item.label,
-                                modifier = Modifier.size(24.dp)
-                            ) 
+                        icon = {
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(
+                                        if (selectedTab == index) BrandPurpleLight
+                                        else Color.Transparent
+                                    )
+                            ) {
+                                Icon(
+                                    imageVector = if (selectedTab == index) item.selectedIcon else item.unselectedIcon,
+                                    contentDescription = item.label,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
                         },
-                        label = { Text(item.label, fontSize = 10.sp) },
+                        label = {
+                            Text(
+                                item.label,
+                                fontSize = 11.sp,
+                                fontWeight = if (selectedTab == index) FontWeight.SemiBold else FontWeight.Normal
+                            )
+                        },
                         colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = dashboardColor,
-                            unselectedIconColor = Color.Gray,
-                            indicatorColor = Color.Transparent
+                            selectedIconColor   = BrandPurple,
+                            unselectedIconColor = TextSecondary,
+                            selectedTextColor   = BrandPurple,
+                            unselectedTextColor = TextSecondary,
+                            indicatorColor      = Color.Transparent
                         )
                     )
                 }
@@ -88,35 +118,37 @@ fun HomeScreen(
             if (selectedTab == 0) {
                 FloatingActionButton(
                     onClick = { showCreateTripSheet = true },
-                    containerColor = dashboardColor,
+                    containerColor = BrandPurple,
                     contentColor = Color.White,
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.shadow(8.dp, RoundedCornerShape(16.dp))
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = "Add Trip")
+                    Icon(Icons.Default.Add, contentDescription = "Add Trip", modifier = Modifier.size(26.dp))
                 }
             }
         }
     ) { padding ->
         val activeTrip = uiState.ongoingTrip ?: uiState.upcomingTrips.firstOrNull()
-        
-        Box(modifier = Modifier.padding(padding).fillMaxSize().background(Color(0xFFFBFBFF))) {
+
+        Box(
+            modifier = Modifier
+                .padding(padding)
+                .fillMaxSize()
+                .background(BackgroundPage)
+        ) {
             when (selectedTab) {
-                0 -> DashboardContent(uiState, onNavigateToTripDetail, onNavigateToSettings, { showCreateTripSheet = true })
-                1 -> TabContentWrapper(activeTrip) { 
-                    ItineraryTab(days = detailViewModel.days.collectAsState().value, viewModel = detailViewModel) 
+                0 -> DashboardContent(uiState, onNavigateToTripDetail, onNavigateToSettings) { showCreateTripSheet = true }
+                1 -> TabContentWrapper(activeTrip) {
+                    ItineraryTab(days = detailViewModel.days.collectAsState().value, viewModel = detailViewModel)
                 }
-                2 -> TabContentWrapper(activeTrip) { 
-                    PackingTab(viewModel = detailViewModel) 
-                }
-                3 -> TabContentWrapper(activeTrip) { 
-                    BudgetTab(viewModel = detailViewModel) 
-                }
-                4 -> TabContentWrapper(activeTrip) { 
+                2 -> TabContentWrapper(activeTrip) { PackingTab(viewModel = detailViewModel) }
+                3 -> TabContentWrapper(activeTrip) { BudgetTab(viewModel = detailViewModel) }
+                4 -> TabContentWrapper(activeTrip) {
                     ExploreTab(
-                        destination = activeTrip?.destination ?: "", 
+                        destination = activeTrip?.destination ?: "",
                         viewModel = hiltViewModel(),
                         onNavigateToAttractionDetail = onNavigateToAttractionDetail
-                    ) 
+                    )
                 }
             }
         }
@@ -133,21 +165,49 @@ fun HomeScreen(
     }
 }
 
-data class HomeTabItem(val label: String, val selectedIcon: ImageVector, val unselectedIcon: ImageVector)
+data class HomeTabItemData(
+    val label: String,
+    val selectedIcon: ImageVector,
+    val unselectedIcon: ImageVector
+)
 
+// ── Empty Tab Wrapper ─────────────────────────────────────────
 @Composable
 fun TabContentWrapper(activeTrip: TripEntity?, content: @Composable () -> Unit) {
     if (activeTrip == null) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(32.dp)) {
-                Icon(Icons.Default.Hiking, null, tint = Color.LightGray, modifier = Modifier.size(64.dp))
-                Spacer(Modifier.height(16.dp))
-                Text("No trip selected", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.padding(40.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(80.dp)
+                        .clip(CircleShape)
+                        .background(BrandPurpleLight),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.Hiking,
+                        null,
+                        tint = BrandPurple,
+                        modifier = Modifier.size(40.dp)
+                    )
+                }
+                Spacer(Modifier.height(20.dp))
                 Text(
-                    "Create or select a trip from the Home tab to start planning your itinerary.", 
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                    color = Color.Gray,
-                    fontSize = 14.sp
+                    "No trip selected",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp,
+                    color = TextPrimary
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "Create or select a trip from the Home tab to start planning.",
+                    textAlign = TextAlign.Center,
+                    color = TextSecondary,
+                    fontSize = 14.sp,
+                    lineHeight = 20.sp
                 )
             }
         }
@@ -156,6 +216,7 @@ fun TabContentWrapper(activeTrip: TripEntity?, content: @Composable () -> Unit) 
     }
 }
 
+// ── Dashboard ─────────────────────────────────────────────────
 @Composable
 fun DashboardContent(
     uiState: HomeUiState,
@@ -164,27 +225,29 @@ fun DashboardContent(
     onCreateClick: () -> Unit
 ) {
     LazyColumn(
-        modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp)
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 20.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(Modifier.height(20.dp))
             HomeHeader(onProfileClick = onNavigateToSettings)
         }
 
         if (uiState.ongoingTrip != null) {
             item {
-                SectionLabel(text = "ONGOING TRIP")
+                SectionLabel("ONGOING TRIP")
+                Spacer(Modifier.height(8.dp))
                 OngoingTripCard(
-                    trip = uiState.ongoingTrip, 
-                    cardColor = Color(0xFF5C59D4),
+                    trip = uiState.ongoingTrip,
                     onClick = { onNavigateToTripDetail(uiState.ongoingTrip.id) }
                 )
             }
         }
 
         item {
-            SectionLabel(text = "UPCOMING")
+            SectionLabel("UPCOMING TRIPS")
         }
 
         if (uiState.upcomingTrips.isEmpty() && uiState.ongoingTrip == null) {
@@ -196,15 +259,35 @@ fun DashboardContent(
         }
 
         item {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                StatCard(Modifier.weight(1f), uiState.totalTrips.toString(), "Total trips", Icons.Default.FlightTakeoff, Color(0xFF5C59D4))
-                StatCard(Modifier.weight(1f), uiState.citiesExplored.toString(), "Cities explored", Icons.Default.Map, Color(0xFF4CAF50))
+            SectionLabel("YOUR STATS")
+            Spacer(Modifier.height(8.dp))
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                StatCard(
+                    modifier = Modifier.weight(1f),
+                    value = uiState.totalTrips.toString(),
+                    label = "Total trips",
+                    icon = Icons.Default.FlightTakeoff,
+                    iconColor = BrandPurple,
+                    iconBg = BrandPurpleLight
+                )
+                StatCard(
+                    modifier = Modifier.weight(1f),
+                    value = uiState.citiesExplored.toString(),
+                    label = "Cities explored",
+                    icon = Icons.Default.Map,
+                    iconColor = BrandGreen,
+                    iconBg = Color(0xFFE8F5E9)
+                )
             }
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(Modifier.height(28.dp))
         }
     }
 }
 
+// ── Header ────────────────────────────────────────────────────
 @Composable
 fun HomeHeader(onProfileClick: () -> Unit) {
     Row(
@@ -213,108 +296,125 @@ fun HomeHeader(onProfileClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column {
-            Text(text = "Good morning,", color = Color.Gray, fontSize = 14.sp)
-            Text(text = "Buddy 👋", fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = Color.Black)
+            Text(
+                text = "Good morning,",
+                color = TextSecondary,
+                fontSize = 14.sp
+            )
+            Text(
+                text = "Buddy 👋",
+                fontSize = 24.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = TextPrimary
+            )
         }
         Box(
             modifier = Modifier
-                .size(44.dp)
+                .size(46.dp)
                 .clip(CircleShape)
-                .background(Color(0xFFEBEBFF))
+                .background(
+                    Brush.linearGradient(listOf(BrandPurple, Color(0xFF9C99F0)))
+                )
                 .clickable { onProfileClick() },
             contentAlignment = Alignment.Center
         ) {
-            Text(text = "BD", color = Color(0xFF5C59D4), fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            Text(
+                text = "BD",
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                fontSize = 15.sp
+            )
         }
     }
 }
 
+// ── Section Label ─────────────────────────────────────────────
 @Composable
 fun SectionLabel(text: String) {
     Text(
         text = text,
         fontSize = 11.sp,
         fontWeight = FontWeight.Bold,
-        color = Color.Gray,
-        letterSpacing = 0.8.sp,
-        modifier = Modifier.padding(bottom = 4.dp)
+        color = TextSecondary,
+        letterSpacing = 1.sp
     )
 }
 
+// ── Ongoing Trip Card ─────────────────────────────────────────
 @Composable
-fun OngoingTripCard(trip: TripEntity, cardColor: Color, onClick: () -> Unit) {
+fun OngoingTripCard(trip: TripEntity, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() },
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = cardColor),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            .clickable { onClick() }
+            .shadow(6.dp, RoundedCornerShape(20.dp)),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        elevation = CardDefaults.cardElevation(0.dp)
     ) {
-        Column(modifier = Modifier.padding(20.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Default.BeachAccess,
-                    contentDescription = null,
-                    tint = Color.White.copy(alpha = 0.7f),
-                    modifier = Modifier.size(14.dp)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    Brush.linearGradient(
+                        listOf(Color(0xFF5C59D4), Color(0xFF9C99F0))
+                    )
                 )
-                Spacer(modifier = Modifier.width(6.dp))
+                .padding(22.dp)
+        ) {
+            Column {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color.White.copy(alpha = 0.2f))
+                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            "● LIVE",
+                            color = Color.White,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.5.sp
+                        )
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
                 Text(
-                    text = "${trip.templateUsed.uppercase()} • ${trip.travelers} TRAVELERS",
-                    color = Color.White.copy(alpha = 0.7f),
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 0.5.sp
+                    text = trip.destination,
+                    color = Color.White,
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.ExtraBold
                 )
+                Spacer(Modifier.height(6.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Outlined.Group,
+                        null,
+                        tint = Color.White.copy(alpha = 0.8f),
+                        modifier = Modifier.size(15.dp)
+                    )
+                    Spacer(Modifier.width(5.dp))
+                    Text(
+                        "${trip.travelers} Travelers",
+                        color = Color.White.copy(alpha = 0.8f),
+                        fontSize = 13.sp
+                    )
+                }
             }
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = trip.destination,
-                color = Color.White,
-                fontSize = 26.sp,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(24.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                OngoingInfoColumn("Day", "3 of 7")
-                OngoingInfoColumn("Budget used", "₹12,400 / ₹20,000")
-                OngoingInfoColumn("Weather", "31°C ☀️")
-            }
-            Spacer(modifier = Modifier.height(20.dp))
-            LinearProgressIndicator(
-                progress = { 0.62f },
+            Icon(
+                Icons.Default.ArrowForwardIos,
+                null,
+                tint = Color.White.copy(alpha = 0.6f),
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(6.dp)
-                    .clip(CircleShape),
-                color = Color.White,
-                trackColor = Color.White.copy(alpha = 0.2f)
+                    .align(Alignment.CenterEnd)
+                    .size(16.dp)
             )
-            Spacer(modifier = Modifier.height(10.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(text = "Packing 62% done", color = Color.White.copy(alpha = 0.7f), fontSize = 11.sp)
-                Text(text = "Day 3", color = Color.White.copy(alpha = 0.7f), fontSize = 11.sp)
-            }
         }
     }
 }
 
-@Composable
-fun OngoingInfoColumn(label: String, value: String) {
-    Column {
-        Text(text = label, color = Color.White.copy(alpha = 0.5f), fontSize = 10.sp)
-        Spacer(modifier = Modifier.height(2.dp))
-        Text(text = value, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-    }
-}
-
+// ── Upcoming Trip Card ────────────────────────────────────────
 @Composable
 fun UpcomingTripCard(trip: TripEntity, onClick: () -> Unit) {
     Card(
@@ -322,8 +422,9 @@ fun UpcomingTripCard(trip: TripEntity, onClick: () -> Unit) {
             .fillMaxWidth()
             .clickable { onClick() },
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFEEEEEE))
+        colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
+        border = androidx.compose.foundation.BorderStroke(0.5.dp, CardBorder),
+        elevation = CardDefaults.cardElevation(0.dp)
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -331,92 +432,136 @@ fun UpcomingTripCard(trip: TripEntity, onClick: () -> Unit) {
         ) {
             Box(
                 modifier = Modifier
-                    .size(48.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(Color(0xFFF5F5F5)),
+                    .size(50.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(BrandPurpleLight),
                 contentAlignment = Alignment.Center
             ) {
-                Text(text = if(trip.templateUsed == "Trekking") "🏔️" else "🏖️", fontSize = 20.sp)
+                Text("🏖️", fontSize = 22.sp)
             }
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(Modifier.width(14.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = trip.destination, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color.Black)
                 Text(
-                    text = "${DateUtils.formatDayMonth(trip.startDate)} - ${DateUtils.formatDayMonth(trip.endDate)} • ${trip.travelers} travelers",
-                    color = Color.Gray,
-                    fontSize = 12.sp
+                    text = trip.destination,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp,
+                    color = TextPrimary
                 )
-            }
-            Column(horizontalAlignment = Alignment.End) {
-                val daysRemaining = DateUtils.getDaysRemaining(trip.startDate)
-                Surface(
-                    color = Color(0xFFFFF3E0),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text(
-                        text = "$daysRemaining days",
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFFE65100)
-                    )
-                }
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(Modifier.height(3.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    LinearProgressIndicator(
-                        progress = { 0.3f },
-                        modifier = Modifier
-                            .width(40.dp)
-                            .height(4.dp)
-                            .clip(CircleShape),
-                        color = Color(0xFF4CAF50),
-                        trackColor = Color(0xFFEEEEEE)
+                    Icon(
+                        Icons.Outlined.CalendarToday,
+                        null,
+                        tint = TextSecondary,
+                        modifier = Modifier.size(12.dp)
                     )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(text = "30%", fontSize = 10.sp, color = Color.Gray, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        "${DateUtils.formatDayMonth(trip.startDate)} – ${DateUtils.formatDayMonth(trip.endDate)}",
+                        color = TextSecondary,
+                        fontSize = 12.sp
+                    )
                 }
             }
+            Icon(
+                Icons.Default.ChevronRight,
+                null,
+                tint = TextSecondary,
+                modifier = Modifier.size(20.dp)
+            )
         }
     }
 }
 
+// ── Stat Card ─────────────────────────────────────────────────
 @Composable
-fun StatCard(modifier: Modifier = Modifier, value: String, label: String, icon: ImageVector, iconColor: Color) {
+fun StatCard(
+    modifier: Modifier = Modifier,
+    value: String,
+    label: String,
+    icon: ImageVector,
+    iconColor: Color,
+    iconBg: Color
+) {
     Card(
         modifier = modifier,
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFEEEEEE))
+        colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
+        border = androidx.compose.foundation.BorderStroke(0.5.dp, CardBorder),
+        elevation = CardDefaults.cardElevation(0.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Icon(
-                imageVector = icon, 
-                contentDescription = null, 
-                tint = iconColor, 
-                modifier = Modifier.size(24.dp)
+            Box(
+                modifier = Modifier
+                    .size(38.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(iconBg),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(icon, null, tint = iconColor, modifier = Modifier.size(20.dp))
+            }
+            Spacer(Modifier.height(14.dp))
+            Text(
+                text = value,
+                fontSize = 26.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = TextPrimary
             )
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(text = value, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, color = Color.Black)
-            Text(text = label, color = Color.Gray, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+            Text(text = label, color = TextSecondary, fontSize = 12.sp)
         }
     }
 }
 
+// ── Empty State ───────────────────────────────────────────────
 @Composable
 fun EmptyStatePlaceholder(onCreateClick: () -> Unit) {
     Column(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 40.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 32.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Icon(Icons.Default.Hiking, contentDescription = null, modifier = Modifier.size(64.dp), tint = Color.LightGray)
-        Spacer(modifier = Modifier.height(16.dp))
-        Text("No upcoming trips", fontWeight = FontWeight.Bold, color = Color.Gray)
-        TextButton(onClick = onCreateClick) {
-            Text("Plan your first adventure")
+        Box(
+            modifier = Modifier
+                .size(80.dp)
+                .clip(CircleShape)
+                .background(BrandPurpleLight),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                Icons.Default.Hiking,
+                null,
+                tint = BrandPurple,
+                modifier = Modifier.size(40.dp)
+            )
+        }
+        Spacer(Modifier.height(16.dp))
+        Text(
+            "No upcoming trips",
+            fontWeight = FontWeight.Bold,
+            fontSize = 17.sp,
+            color = TextPrimary
+        )
+        Spacer(Modifier.height(6.dp))
+        Text(
+            "Start planning your next adventure!",
+            color = TextSecondary,
+            fontSize = 13.sp
+        )
+        Spacer(Modifier.height(16.dp))
+        Button(
+            onClick = onCreateClick,
+            shape = RoundedCornerShape(12.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = BrandPurple)
+        ) {
+            Icon(Icons.Default.Add, null, modifier = Modifier.size(16.dp))
+            Spacer(Modifier.width(6.dp))
+            Text("Plan an adventure", fontWeight = FontWeight.SemiBold)
         }
     }
 }
 
+// ── Create Trip Bottom Sheet ──────────────────────────────────
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateTripBottomSheet(
@@ -429,55 +574,180 @@ fun CreateTripBottomSheet(
     val dateRangePickerState = rememberDateRangePickerState()
     var showDateRangePicker by remember { mutableStateOf(false) }
 
-    val selectedDateText = if (dateRangePickerState.selectedStartDateMillis != null && dateRangePickerState.selectedEndDateMillis != null) {
+    val selectedDateText = if (
+        dateRangePickerState.selectedStartDateMillis != null &&
+        dateRangePickerState.selectedEndDateMillis != null
+    ) {
         val start = DateUtils.formatDate(dateRangePickerState.selectedStartDateMillis!!)
-        val end = DateUtils.formatDate(dateRangePickerState.selectedEndDateMillis!!)
-        "$start - $end"
-    } else "Select Dates"
+        val end   = DateUtils.formatDate(dateRangePickerState.selectedEndDateMillis!!)
+        "$start – $end"
+    } else "Select dates"
 
-    ModalBottomSheet(onDismissRequest = onDismiss) {
-        Column(Modifier.padding(24.dp).fillMaxWidth().navigationBarsPadding().imePadding()) {
-            Text("New Adventure", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.height(24.dp))
-            OutlinedTextField(value = destination, onValueChange = { destination = it }, label = { Text("Destination") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-            Spacer(modifier = Modifier.height(16.dp))
-            OutlinedCard(onClick = { showDateRangePicker = true }, modifier = Modifier.fillMaxWidth()) {
-                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.CalendarToday, contentDescription = null, modifier = Modifier.size(20.dp))
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text(text = selectedDateText)
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = SurfaceWhite,
+        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+    ) {
+        Column(
+            Modifier
+                .padding(horizontal = 24.dp, vertical = 8.dp)
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .imePadding()
+        ) {
+            // Handle
+            Box(
+                Modifier
+                    .align(Alignment.CenterHorizontally)
+                    .width(40.dp)
+                    .height(4.dp)
+                    .clip(RoundedCornerShape(999.dp))
+                    .background(CardBorder)
+            )
+            Spacer(Modifier.height(20.dp))
+            Text(
+                "New Adventure",
+                fontWeight = FontWeight.ExtraBold,
+                fontSize = 22.sp,
+                color = TextPrimary
+            )
+            Text(
+                "Fill in the details below to get started.",
+                color = TextSecondary,
+                fontSize = 13.sp
+            )
+            Spacer(Modifier.height(24.dp))
+
+            OutlinedTextField(
+                value = destination,
+                onValueChange = { destination = it },
+                label = { Text("Destination") },
+                leadingIcon = {
+                    Icon(Icons.Outlined.LocationOn, null, tint = BrandPurple)
+                },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                shape = RoundedCornerShape(12.dp)
+            )
+            Spacer(Modifier.height(14.dp))
+
+            OutlinedCard(
+                onClick = { showDateRangePicker = true },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, CardBorder)
+            ) {
+                Row(
+                    Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Outlined.CalendarMonth, null, tint = BrandPurple, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(12.dp))
+                    Text(
+                        text = selectedDateText,
+                        color = if (selectedDateText == "Select dates") TextSecondary else TextPrimary,
+                        fontSize = 14.sp
+                    )
                 }
             }
-            Spacer(modifier = Modifier.height(20.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Travelers", modifier = Modifier.weight(1f), fontWeight = FontWeight.Medium)
-                IconButton(onClick = { if (travelers > 1) travelers-- }) { Icon(Icons.Default.Remove, null) }
-                Text(travelers.toString(), modifier = Modifier.padding(horizontal = 12.dp), fontWeight = FontWeight.Bold)
-                IconButton(onClick = { if (travelers < 20) travelers++ }) { Icon(Icons.Default.Add, null) }
+
+            Spacer(Modifier.height(16.dp))
+
+            // Traveler counter
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(BackgroundPage)
+                    .padding(horizontal = 16.dp, vertical = 10.dp)
+            ) {
+                Icon(Icons.Outlined.Group, null, tint = BrandPurple, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(10.dp))
+                Text("Travelers", modifier = Modifier.weight(1f), fontWeight = FontWeight.Medium, color = TextPrimary)
+                IconButton(
+                    onClick = { if (travelers > 1) travelers-- },
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .background(SurfaceWhite)
+                ) {
+                    Icon(Icons.Default.Remove, null, modifier = Modifier.size(16.dp))
+                }
+                Text(
+                    travelers.toString(),
+                    modifier = Modifier.padding(horizontal = 14.dp),
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 16.sp,
+                    color = TextPrimary
+                )
+                IconButton(
+                    onClick = { if (travelers < 20) travelers++ },
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .background(SurfaceWhite)
+                ) {
+                    Icon(Icons.Default.Add, null, modifier = Modifier.size(16.dp))
+                }
             }
-            Spacer(modifier = Modifier.height(20.dp))
-            Text("Template", fontWeight = FontWeight.Medium)
+
+            Spacer(Modifier.height(16.dp))
+
+            Text("Trip type", fontWeight = FontWeight.SemiBold, color = TextPrimary)
+            Spacer(Modifier.height(8.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf("Beach", "Business", "Trekking").forEach { item ->
-                    FilterChip(selected = template == item, onClick = { template = item }, label = { Text(item) })
+                    FilterChip(
+                        selected = template == item,
+                        onClick = { template = item },
+                        label = { Text(item, fontSize = 13.sp) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = BrandPurple,
+                            selectedLabelColor = Color.White
+                        ),
+                        shape = RoundedCornerShape(10.dp)
+                    )
                 }
             }
-            Spacer(modifier = Modifier.height(32.dp))
+
+            Spacer(Modifier.height(28.dp))
+
             Button(
-                onClick = { 
-                    if (dateRangePickerState.selectedStartDateMillis != null && dateRangePickerState.selectedEndDateMillis != null) {
-                        onSave(destination, dateRangePickerState.selectedStartDateMillis!!, dateRangePickerState.selectedEndDateMillis!!, travelers, template) 
+                onClick = {
+                    if (
+                        dateRangePickerState.selectedStartDateMillis != null &&
+                        dateRangePickerState.selectedEndDateMillis != null
+                    ) {
+                        onSave(
+                            destination,
+                            dateRangePickerState.selectedStartDateMillis!!,
+                            dateRangePickerState.selectedEndDateMillis!!,
+                            travelers,
+                            template
+                        )
                     }
                 },
-                modifier = Modifier.fillMaxWidth().height(56.dp),
-                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(54.dp),
+                shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = BrandPurple),
                 enabled = destination.length >= 2 && dateRangePickerState.selectedEndDateMillis != null
-            ) { Text("Save Trip", fontWeight = FontWeight.Bold) }
-            Spacer(modifier = Modifier.height(16.dp))
+            ) {
+                Text("Save Trip", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+            }
+            Spacer(Modifier.height(16.dp))
         }
     }
+
     if (showDateRangePicker) {
-        DatePickerDialog(onDismissRequest = { showDateRangePicker = false }, confirmButton = { TextButton(onClick = { showDateRangePicker = false }) { Text("OK") } }) {
+        DatePickerDialog(
+            onDismissRequest = { showDateRangePicker = false },
+            confirmButton = {
+                TextButton(onClick = { showDateRangePicker = false }) { Text("OK") }
+            }
+        ) {
             DateRangePicker(state = dateRangePickerState, modifier = Modifier.weight(1f))
         }
     }

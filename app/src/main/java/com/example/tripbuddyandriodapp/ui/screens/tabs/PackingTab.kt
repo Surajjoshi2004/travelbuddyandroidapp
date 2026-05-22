@@ -4,11 +4,14 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -27,6 +30,12 @@ import com.example.tripbuddyandriodapp.ui.screens.TripDetailViewModel
 @Composable
 fun PackingTab(viewModel: TripDetailViewModel) {
     val items by viewModel.packingItems.collectAsState()
+    val trip by viewModel.trip.collectAsState()
+    val destination = trip?.destination ?: ""
+    val aiSuggestions by viewModel.aiPackingSuggestions.collectAsState()
+    val isFetching by viewModel.isFetchingSuggestions.collectAsState()
+    val aiError by viewModel.aiError.collectAsState()
+    
     var searchQuery by remember { mutableStateOf("") }
 
     val filteredItems = items.filter {
@@ -84,6 +93,53 @@ fun PackingTab(viewModel: TripDetailViewModel) {
             }
         }
 
+        if (destination.isNotBlank()) {
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            if (aiError != null) {
+                Text(
+                    text = "AI Error: $aiError", 
+                    color = MaterialTheme.colorScheme.error, 
+                    style = MaterialTheme.typography.labelSmall
+                )
+            } else {
+                Text(
+                    text = "AI Suggestions for $destination", 
+                    style = MaterialTheme.typography.labelMedium, 
+                    color = Color(0xFF5C59D4)
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            if (isFetching) {
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth().height(2.dp), color = Color(0xFF5C59D4))
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+
+            if (aiSuggestions.isNotEmpty()) {
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(aiSuggestions) { suggestion ->
+                        val isAlreadyAdded = items.any { it.name.equals(suggestion.first, ignoreCase = true) }
+                        FilterChip(
+                            selected = isAlreadyAdded,
+                            onClick = { 
+                                if (!isAlreadyAdded) {
+                                    viewModel.addPackingItem(suggestion.first, suggestion.second)
+                                }
+                            },
+                            label = { Text(suggestion.first) },
+                            leadingIcon = if (isAlreadyAdded) {
+                                { Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                            } else null
+                        )
+                    }
+                }
+            } else if (!isFetching && aiError == null) {
+                Text("No suggestions available. Try refreshing.", fontSize = 12.sp, color = Color.Gray)
+            }
+        }
+
         Spacer(modifier = Modifier.height(16.dp))
 
         OutlinedTextField(
@@ -125,15 +181,6 @@ fun PackingTab(viewModel: TripDetailViewModel) {
                 items(categoryItems) { item ->
                     PackingItemRow(item = item, onToggle = { viewModel.togglePackingItem(item) })
                 }
-            }
-        }
-
-        if (items.any { it.isChecked }) {
-            TextButton(
-                onClick = { /* clear checked */ },
-                modifier = Modifier.align(Alignment.CenterHorizontally)
-            ) {
-                Text("Clear checked items", color = Color.Gray, fontSize = 13.sp)
             }
         }
     }

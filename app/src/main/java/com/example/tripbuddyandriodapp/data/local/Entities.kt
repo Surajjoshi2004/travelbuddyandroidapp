@@ -26,7 +26,10 @@ data class TripEntity(
             onDelete = ForeignKey.CASCADE
         )
     ],
-    indices = [Index("tripId")]
+    indices = [
+        Index("tripId"),
+        Index(value = ["tripId", "dayNumber"], unique = true) // ENFORCES ONLY ONE DAY 1, DAY 2, ETC PER TRIP
+    ]
 )
 data class DayEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -51,7 +54,7 @@ data class DayEntity(
 data class ActivityEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val dayId: Long,
-    val time: String, // "HH:mm"
+    val time: String,
     val title: String,
     val description: String,
     val isSynced: Boolean = false

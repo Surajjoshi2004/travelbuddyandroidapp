@@ -1,6 +1,5 @@
 package com.example.tripbuddyandriodapp.ui.screens.tabs
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -8,6 +7,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Lightbulb
+import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -44,20 +46,13 @@ fun ExploreTab(
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // Search Bar at the top
         OutlinedTextField(
             value = searchQuery,
             onValueChange = { viewModel.onSearchQueryChange(it) },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            placeholder = { Text("Search attractions or categories...") },
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            placeholder = { Text("Search attractions...") },
             leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
             shape = MaterialTheme.shapes.medium,
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Color(0xFF5C59D4),
-                unfocusedBorderColor = Color.LightGray.copy(alpha = 0.5f)
-            ),
             singleLine = true
         )
 
@@ -68,73 +63,65 @@ fun ExploreTab(
                 }
                 is ExploreUiState.Success -> {
                     Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .verticalScroll(rememberScrollState())
-                            .padding(horizontal = 16.dp)
+                        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp)
                     ) {
                         state.weather?.let {
                             WeatherCard(weather = it)
                             Spacer(modifier = Modifier.height(24.dp))
                         }
 
-                        Text(
-                            text = stringResource(R.string.must_visit),
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onBackground
-                        )
+                        Text(text = "Top Attractions", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                         Spacer(modifier = Modifier.height(12.dp))
-
-                        if (state.attractions.isEmpty()) {
-                            Text(
-                                text = "No attractions found matching your search.",
-                                color = Color.Gray,
-                                modifier = Modifier.padding(vertical = 16.dp)
-                            )
-                        } else {
-                            // Using a horizontal row structure that doesn't trigger measurement penalties
-                            LazyRow(
-                                contentPadding = PaddingValues(bottom = 16.dp),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                items(state.attractions, key = { it.xid }) { attraction ->
-                                    AttractionCard(
-                                        attraction = attraction,
-                                        onClick = { onNavigateToAttractionDetail(attraction.xid) }
-                                    )
-                                }
+                        
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            items(state.attractions) { attraction ->
+                                AttractionCard(attraction = attraction, onClick = { onNavigateToAttractionDetail(attraction.xid) })
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(24.dp))
+                        if (state.aiActivities.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(24.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(text = "AI Picked Activities", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                            }
+                            Spacer(modifier = Modifier.height(12.dp))
+                            state.aiActivities.forEach { (title, desc) ->
+                                AiActivityCard(title = title, description = desc)
+                            }
+                        }
 
-                        Text(
-                            text = stringResource(R.string.local_food),
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onBackground
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
+                        if (state.aiFoods.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(24.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Restaurant, contentDescription = null, tint = Color(0xFFE91E63))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(text = "Local Food Delights", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                            }
+                            Spacer(modifier = Modifier.height(12.dp))
+                            state.aiFoods.forEach { food ->
+                                AiInfoCard(text = food)
+                            }
+                        }
 
-                        LocalFoodSection(destination)
+                        if (state.aiTips.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(24.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Lightbulb, contentDescription = null, tint = Color(0xFFFFC107))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(text = "Local Travel Tips", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                            }
+                            Spacer(modifier = Modifier.height(12.dp))
+                            state.aiTips.forEach { tip ->
+                                AiInfoCard(text = tip)
+                            }
+                        }
                         Spacer(modifier = Modifier.height(24.dp))
                     }
                 }
                 is ExploreUiState.Error -> {
-                    Column(
-                        modifier = Modifier.align(Alignment.Center),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(text = state.message, color = MaterialTheme.colorScheme.error)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Button(onClick = {
-                            val now = System.currentTimeMillis()
-                            viewModel.loadExploreData(destination, DateUtils.formatIso(now), DateUtils.formatIso(now + 86400000 * 7))
-                        }) {
-                            Text("Retry")
-                        }
-                    }
+                    Text(text = state.message, color = MaterialTheme.colorScheme.error, modifier = Modifier.align(Alignment.Center))
                 }
                 else -> {}
             }
@@ -143,35 +130,27 @@ fun ExploreTab(
 }
 
 @Composable
-fun LocalFoodSection(destination: String) {
-    val foods = remember(destination) {
-        when {
-            destination.contains("Paris", ignoreCase = true) -> listOf("🥐 Croissant", "🍮 Crème Brûlée", "🥘 Ratatouille")
-            destination.contains("Tokyo", ignoreCase = true) -> listOf("🍣 Sushi", "🍜 Ramen", "🐙 Takoyaki")
-            destination.contains("Mumbai", ignoreCase = true) -> listOf("🍔 Vada Pav", "🥘 Pav Bhaji", "🐟 Bombil Fry")
-            destination.contains("Goa", ignoreCase = true) -> listOf("🍛 Fish Curry", "🥥 Bebinca", "🍤 Prawn Balchão")
-            else -> listOf("🍔 Burger", "🍕 Pizza", "🍝 Pasta")
+fun AiActivityCard(title: String, description: String) {
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(text = title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text(text = description, style = MaterialTheme.typography.bodyMedium)
         }
     }
+}
 
-    Column {
-        foods.forEach { food ->
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.3f)),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Text(
-                    text = food,
-                    modifier = Modifier.padding(16.dp),
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
+@Composable
+fun AiInfoCard(text: String) {
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Text(text = text, modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.bodyLarge)
     }
 }

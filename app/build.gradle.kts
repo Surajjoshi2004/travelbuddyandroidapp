@@ -90,6 +90,9 @@ dependencies {
     // Coil
     implementation(libs.coil.compose)
 
+    // Gemini
+    implementation(libs.google.generativeai)
+
     // Testing
     testImplementation(libs.junit)
 

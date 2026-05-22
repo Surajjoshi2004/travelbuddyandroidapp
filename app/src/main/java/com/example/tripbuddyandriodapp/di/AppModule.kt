@@ -2,7 +2,9 @@ package com.example.tripbuddyandriodapp.di
 
 import android.content.Context
 import androidx.room.Room
+import com.example.tripbuddyandriodapp.BuildConfig
 import com.example.tripbuddyandriodapp.data.local.*
+import com.google.ai.client.generativeai.GenerativeModel
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -27,7 +29,7 @@ object AppModule {
             TripPlannerDatabase::class.java,
             "trip_planner_db"
         )
-        .fallbackToDestructiveMigration() // Add this to prevent crashes on schema changes
+        .fallbackToDestructiveMigration()
         .build()
     }
 
@@ -57,5 +59,16 @@ object AppModule {
                 })
             }
         }
+    }
+
+    @Provides
+    @Singleton
+    fun provideGenerativeModel(): GenerativeModel {
+        // You should provide your API Key in local.properties and access via BuildConfig
+        // or a safer method for production apps.
+        return GenerativeModel(
+            modelName = "gemini-1.5-flash",
+            apiKey = "AIzaSyBhGO-4KNhoyaklNG4JBvEIU-UHg2EY2Rk" // Replace with BuildConfig.GEMINI_API_KEY
+        )
     }
 }
